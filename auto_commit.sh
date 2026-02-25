@@ -12,7 +12,7 @@ fi
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Check for changes
-if git diff --quiet && git diff --cached --quiet; then
+if [ -z "$(git status --porcelain)" ]; then
     echo "[$TIMESTAMP] No changes to commit"
     exit 0
 fi
