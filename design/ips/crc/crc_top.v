@@ -43,6 +43,7 @@ module crc_top (
     wire            poly_rev_out;
     wire            done_ie;
     wire    [31:0]  data_len;
+    wire    [3:0]   fixed_poly_sel;
 
     wire            engine_busy;
     wire            engine_done;
@@ -82,7 +83,7 @@ module crc_top (
         .rst_n(hreset_n),
         .wr_en(reg_wr_en),
         .addr(reg_addr),
-        .wr_data(reg_wr_data),
+        .wr_data(wr_data),
         .rd_data(reg_rd_data),
 
         .engine_busy(engine_busy),
@@ -102,7 +103,8 @@ module crc_top (
         .poly_rev_in(poly_rev_in),
         .poly_rev_out(poly_rev_out),
         .done_ie(done_ie),
-        .data_len(data_len)
+        .data_len(data_len),
+        .fixed_poly_sel(fixed_poly_sel)
     );
 
     // Instantiate crc_engine
@@ -120,6 +122,7 @@ module crc_top (
         .poly_rev_in(poly_rev_in),
         .poly_rev_out(poly_rev_out),
         .data_len(data_len),
+        .fixed_poly_sel(fixed_poly_sel),
         .raw_data_wr(raw_data_wr),
         .raw_data_wdata(raw_data_wdata),
         .raw_data_size(raw_data_size),

@@ -31,7 +31,8 @@ module crc_regfile (
     output          poly_rev_in,
     output          poly_rev_out,
     output          done_ie,
-    output  [31:0]  data_len
+    output  [31:0]  data_len,
+    output  [3:0]   fixed_poly_sel
 );
 
     // Register addresses
@@ -85,6 +86,7 @@ module crc_regfile (
     assign out_xor_val = {out_xor_h_reg, out_xor_l_reg};
     assign done_ie = done_ie_reg;
     assign data_len = data_len_reg;
+    assign fixed_poly_sel = fixed_poly_sel_reg;
 
     // Read logic
     reg [31:0]  rd_data_reg;

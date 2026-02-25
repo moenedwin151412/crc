@@ -17,6 +17,7 @@ module crc_engine (
     input           poly_rev_in,
     input           poly_rev_out,
     input   [31:0]  data_len,
+    input   [3:0]   fixed_poly_sel,
 
     // Data Input
     input           raw_data_wr,
@@ -60,6 +61,26 @@ module crc_engine (
                                   (raw_data_size == 3'b001) ? 4'd2 :
                                   (raw_data_size == 3'b010) ? 4'd4 : 4'd0;
 
+    // Polynomial selection
+    localparam [63:0] POLY_CRC_8_SAE    = 64'h1D;
+    localparam [63:0] POLY_CRC_8_AUTOSAR = 64'h2F;
+    localparam [63:0] POLY_CRC_16_CCITT = 64'h1021;
+    localparam [63:0] POLY_CRC_32       = 64'h04C11DB7;
+    localparam [63:0] POLY_CRC_32C93    = 64'hD419CC15;
+
+    reg [63:0] effective_poly;
+    always @* begin
+        case (fixed_poly_sel)
+            4'h1: effective_poly = POLY_CRC_8_SAE;
+            4'h2: effective_poly = POLY_CRC_8_AUTOSAR;
+            4'h3: effective_poly = POLY_CRC_16_CCITT;
+            4'h4: effective_poly = POLY_CRC_32;
+            4'h5: effective_poly = POLY_CRC_32C93;
+            default: effective_poly = poly_val;
+        endcase
+    end
+
+
     // Next CRC value calculation (combinational)
     wire [63:0] crc_next;
     reg  [63:0] temp_crc;
@@ -78,7 +99,7 @@ module crc_engine (
         data_chunk = byte0;
         for (i = 0; i < 8; i = i + 1) begin
             if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                temp_crc = (temp_crc << 1) ^ poly_val;
+                temp_crc = (temp_crc << 1) ^ effective_poly;
             end else begin
                 temp_crc = temp_crc << 1;
             end
@@ -89,7 +110,7 @@ module crc_engine (
             data_chunk = byte1;
             for (i = 0; i < 8; i = i + 1) begin
                 if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                    temp_crc = (temp_crc << 1) ^ poly_val;
+                    temp_crc = (temp_crc << 1) ^ effective_poly;
                 end else begin
                     temp_crc = temp_crc << 1;
                 end
@@ -101,7 +122,7 @@ module crc_engine (
             data_chunk = byte2;
             for (i = 0; i < 8; i = i + 1) begin
                 if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                    temp_crc = (temp_crc << 1) ^ poly_val;
+                    temp_crc = (temp_crc << 1) ^ effective_poly;
                 end else begin
                     temp_crc = temp_crc << 1;
                 end
@@ -110,7 +131,7 @@ module crc_engine (
             data_chunk = byte3;
             for (i = 0; i < 8; i = i + 1) begin
                 if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                    temp_crc = (temp_crc << 1) ^ poly_val;
+                    temp_crc = (temp_crc << 1) ^ effective_poly;
                 end else begin
                     temp_crc = temp_crc << 1;
                 end
