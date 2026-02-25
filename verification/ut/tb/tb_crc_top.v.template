@@ -64,12 +64,7 @@ module tb_crc_top;
         $dumpvars(0, tb_crc_top);
 
         // Run test case
-        `ifdef TESTCASE
-            `include `TESTCASE
-        `else
-            // Default test case
-            `include "verification/ut/tests/test_crc_simple.v"
-        `endif
+        // %%TESTCASE_INCLUDE%%
     end
 
 endmodule

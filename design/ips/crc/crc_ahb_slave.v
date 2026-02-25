@@ -21,7 +21,7 @@ module crc_ahb_slave (
 
     // Register File Interface
     output          reg_wr_en,
-    output  [11:0]  reg_addr,
+    output  [14:0]  reg_addr,
     output  [31:0]  reg_wr_data,
 
     // Raw Data Interface
@@ -34,10 +34,10 @@ module crc_ahb_slave (
     localparam ADDR_REG_BASE = 12'h000;
     localparam ADDR_REG_END  = 12'h044;
     localparam ADDR_RAW_BASE = 12'h048;
-    localparam ADDR_RAW_END  = 12'h7FFC;
+    localparam ADDR_RAW_END  = 15'h7FFC;
 
-    wire    addr_is_reg = (haddr[11:0] >= ADDR_REG_BASE) && (haddr[11:0] <= ADDR_REG_END);
-    wire    addr_is_raw = (haddr[11:0] >= ADDR_RAW_BASE) && (haddr[11:0] <= ADDR_RAW_END);
+    wire    addr_is_reg = (haddr[14:0] >= ADDR_REG_BASE) && (haddr[14:0] <= ADDR_REG_END);
+    wire    addr_is_raw = (haddr[14:0] >= ADDR_RAW_BASE) && (haddr[14:0] <= ADDR_RAW_END);
 
     // Transfer state
     reg     hready_reg;
@@ -51,7 +51,7 @@ module crc_ahb_slave (
     assign hrdata = hrdata_reg;
 
     // Register access logic
-    assign reg_addr = haddr[11:0];
+    assign reg_addr = haddr[14:0];
     assign reg_wr_data = hwdata;
     assign reg_wr_en = transfer_active && hwrite && addr_is_reg;
 

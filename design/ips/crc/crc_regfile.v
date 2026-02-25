@@ -8,7 +8,7 @@ module crc_regfile (
 
     // AHB Interface
     input           wr_en,
-    input   [11:0]  addr,
+    input   [14:0]  addr,
     input   [31:0]  wr_data,
     output  [31:0]  rd_data,
 

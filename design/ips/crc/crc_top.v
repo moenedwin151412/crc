@@ -24,7 +24,7 @@ module crc_top (
 
     // Internal Signals
     wire            reg_wr_en;
-    wire    [11:0]  reg_addr;
+    wire    [14:0]  reg_addr;
     wire    [31:0]  reg_wr_data;
     wire    [31:0]  reg_rd_data;
     
