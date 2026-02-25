@@ -83,7 +83,7 @@ module crc_top (
         .rst_n(hreset_n),
         .wr_en(reg_wr_en),
         .addr(reg_addr),
-        .wr_data(wr_data),
+        .wr_data(reg_wr_data),
         .rd_data(reg_rd_data),
 
         .engine_busy(engine_busy),

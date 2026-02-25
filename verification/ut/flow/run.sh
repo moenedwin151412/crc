@@ -14,7 +14,7 @@ rm -f crc_sim.vvp
 rm -f tb_crc_top.vcd
 
 # Compile sources
-iverilog -o crc_sim.vvp -c design/ips/crc/crc.f verification/ut/tb/tb_crc_top.v -DTESTCASE=\\"$TESTCASE.v\\" -s tb_crc_top
+iverilog -o crc_sim.vvp -c design/ips/crc/crc.f verification/ut/tb/tb_crc_top.v -DTESTCASE=\\"verification/ut/tests/$TESTCASE.v\\" -s tb_crc_top
 
 # Run simulation
 vvp crc_sim.vvp

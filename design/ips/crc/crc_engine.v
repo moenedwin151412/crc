@@ -38,7 +38,6 @@ module crc_engine (
 
     reg [63:0] crc_reg;
     reg [31:0] data_cnt_reg;
-    reg        is_first_data;
 
     // Bit reversal function for input data
     function [7:0] reverse_byte;
@@ -82,26 +81,20 @@ module crc_engine (
 
 
     // Next CRC value calculation (combinational)
-    wire [63:0] crc_next;
-    reg  [63:0] temp_crc;
+    reg [63:0] crc_next;
     reg  [7:0]  data_chunk;
     integer i, j;
 
     always @* begin
-        temp_crc = crc_reg;
+        crc_next = crc_reg;
         
-        // Apply initial XOR on the very first data chunk
-        if (is_first_data) begin
-            temp_crc = crc_reg ^ init_xor_val;
-        end
-
         // Process byte 0
         data_chunk = byte0;
         for (i = 0; i < 8; i = i + 1) begin
-            if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                temp_crc = (temp_crc << 1) ^ effective_poly;
+            if ((crc_next >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
+                crc_next = (crc_next << 1) ^ effective_poly;
             end else begin
-                temp_crc = temp_crc << 1;
+                crc_next = crc_next << 1;
             end
         end
 
@@ -109,10 +102,10 @@ module crc_engine (
         if (bytes_to_process > 1) begin
             data_chunk = byte1;
             for (i = 0; i < 8; i = i + 1) begin
-                if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                    temp_crc = (temp_crc << 1) ^ effective_poly;
+                if ((crc_next >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
+                    crc_next = (crc_next << 1) ^ effective_poly;
                 end else begin
-                    temp_crc = temp_crc << 1;
+                    crc_next = crc_next << 1;
                 end
             end
         end
@@ -121,23 +114,22 @@ module crc_engine (
         if (bytes_to_process > 3) begin
             data_chunk = byte2;
             for (i = 0; i < 8; i = i + 1) begin
-                if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                    temp_crc = (temp_crc << 1) ^ effective_poly;
+                if ((crc_next >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
+                    crc_next = (crc_next << 1) ^ effective_poly;
                 end else begin
-                    temp_crc = temp_crc << 1;
+                    crc_next = crc_next << 1;
                 end
             end
             
             data_chunk = byte3;
             for (i = 0; i < 8; i = i + 1) begin
-                if ((temp_crc >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
-                    temp_crc = (temp_crc << 1) ^ effective_poly;
+                if ((crc_next >> (crc_width_bits - 1)) ^ data_chunk[7-i]) begin
+                    crc_next = (crc_next << 1) ^ effective_poly;
                 end else begin
-                    temp_crc = temp_crc << 1;
+                    crc_next = crc_next << 1;
                 end
             end
         end
-        crc_next = temp_crc;
     end
 
     // Determine CRC bit width
@@ -167,18 +159,15 @@ module crc_engine (
             state <= S_IDLE;
             crc_reg <= 64'b0;
             data_cnt_reg <= 32'b0;
-            is_first_data <= 1'b1;
         end else begin
             if (crc_rst || crc_start) begin
                 state <= crc_start ? S_BUSY : S_IDLE;
-                crc_reg <= preset_val;
+                crc_reg <= preset_val ^ init_xor_val;
                 data_cnt_reg <= 32'b0;
-                is_first_data <= 1'b1;
             end else if (state == S_BUSY) begin
                 if (raw_data_wr) begin
                     crc_reg <= crc_next;
                     data_cnt_reg <= data_cnt_reg + bytes_to_process;
-                    is_first_data <= 1'b0;
                 end
                 
                 if (done) begin
