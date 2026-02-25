@@ -1,0 +1,103 @@
+# Gitignore for Digital Design / Verilog Simulation
+
+# iverilog/vvp simulation outputs
+*.vvp
+*.vpi
+*.vpd
+*.vcd
+*.fst
+*.lxt
+*.lxt2
+
+# GTKWave
+*.gtkw
+*.sav
+
+# Log files
+*.log
+*.out
+
+# Temporary files
+*.tmp
+*~
+*.swp
+*.swo
+*.bak
+*.old
+*.orig
+
+# Directory for simulation artifacts
+sim_build/
+work/
+obj/
+build/
+
+# ModelSim/QuestaSim
+modelsim.ini
+transcript
+vsim.wlf
+wlf*
+*.mpf
+*.mti
+*.cr.mti
+_work/
+
+# Vivado
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.xpr
+*.xsa
+*.hdf
+*.bit
+*.ltx
+.Xil/
+
+# Quartus
+db/
+incremental_db/
+output_files/
+simulation/
+timing/
+*.qsf
+*.qpf
+*.qws
+
+# Synopsys VCS
+simv
+simv.daidir/
+csrc/
+ucli.key
+vc_hdrs.h
+vcs.log
+inter.vpd
+
+# Cadence/Xcelium
+xrun.log
+xmsim.log
+xmverilog.log
+*.shm/
+ncelab.log
+ncsim.log
+ncvlog.log
+
+# Mentor Graphics
+*.wlf
+wlft*
+
+# Coverage reports
+coverage/
+*.vdb/
+urgReport/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.sublime-*
