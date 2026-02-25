@@ -32,7 +32,8 @@ module crc_regfile (
     output          poly_rev_out,
     output          done_ie,
     output  [31:0]  data_len,
-    output  [3:0]   fixed_poly_sel
+    output  [3:0]   fixed_poly_sel,
+    output          data_len_wr     // Pulse when data_len is written
 );
 
     // Register addresses
@@ -87,6 +88,9 @@ module crc_regfile (
     assign done_ie = done_ie_reg;
     assign data_len = data_len_reg;
     assign fixed_poly_sel = fixed_poly_sel_reg;
+    
+    // Generate pulse when data_len is written (for counter reset)
+    assign data_len_wr = wr_en && (addr == ADDR_CRC_DATA_LEN);
 
     // Read logic
     reg [31:0]  rd_data_reg;

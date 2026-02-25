@@ -18,6 +18,7 @@ module crc_engine (
     input           poly_rev_out,
     input   [31:0]  data_len,
     input   [3:0]   fixed_poly_sel,
+    input           data_len_wr,     // Pulse to reset data counter
 
     // Data Input
     input           raw_data_wr,
@@ -163,6 +164,9 @@ module crc_engine (
             if (crc_rst || crc_start) begin
                 state <= crc_start ? S_BUSY : S_IDLE;
                 crc_reg <= preset_val ^ init_xor_val;
+                data_cnt_reg <= 32'b0;
+            end else if (data_len_wr) begin
+                // Reset counter when data length is programmed (for new transfer)
                 data_cnt_reg <= 32'b0;
             end else if (state == S_BUSY) begin
                 if (raw_data_wr) begin
