@@ -4,6 +4,9 @@
 
 `timescale 1ns / 1ps
 
+// Include test case module definition
+`include "verification/ut/tests/test_crc_debug5.v"
+
 module tb_crc_top;
 
     // Clock and Reset
@@ -44,9 +47,9 @@ module tb_crc_top;
         .crc_irq(crc_irq)
     );
     
-    // AHB Master BFM (will be driven by test case)
-    // Signals are connected by name in the test case include file
-    
+    // Instantiate test case (signals connected by name)
+    test_crc_debug5 u_test ();
+
     // Clock generator
     always #5 hclk = ~hclk;
 
@@ -62,9 +65,6 @@ module tb_crc_top;
         // Dump waves
         $dumpfile("tb_crc_top.vcd");
         $dumpvars(0, tb_crc_top);
-
-        // Run test case
-        `include verification/ut/tests/test_crc_simple.v
     end
 
 endmodule

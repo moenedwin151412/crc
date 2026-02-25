@@ -12,6 +12,8 @@ module test_crc16_ccitt;
         .hreadyout(hreadyout), .hresp(hresp)
     );
 
+    reg [31:0] result;
+
     initial begin
         $display("Starting test_crc16_ccitt...");
 
@@ -36,7 +38,6 @@ module test_crc16_ccitt;
         wait (crc_irq);
         $display("CRC DONE interrupt received.");
 
-        reg [31:0] result;
         bfm.ahb_read(32'h2C, result, 3'b010); // Read CRC_RESULT_L
 
         if (result[15:0] === 16'h29B1) begin

@@ -1,28 +1,37 @@
 //
-// test_crc_simple.v
+// test_crc_simple.v - CRC-32 test for "123456789"
 //
 
 `include "verification/ut/tb/ahb_master_bfm.v"
 
 module test_crc_simple;
 
-    // Instantiate BFM
+    // BFM instance with hierarchical references to tb_crc_top signals
     ahb_master_bfm bfm (
-        .hsel(hsel),
-        .haddr(haddr),
-        .htrans(htrans),
-        .hwrite(hwrite),
-        .hsize(hsize),
-        .hburst(hburst),
-        .hwdata(hwdata),
-        .hready(hready),
-        .hrdata(hrdata),
-        .hreadyout(hreadyout),
-        .hresp(hresp)
+        .hclk(tb_crc_top.hclk),
+        .hsel(tb_crc_top.hsel),
+        .haddr(tb_crc_top.haddr),
+        .htrans(tb_crc_top.htrans),
+        .hwrite(tb_crc_top.hwrite),
+        .hsize(tb_crc_top.hsize),
+        .hburst(tb_crc_top.hburst),
+        .hwdata(tb_crc_top.hwdata),
+        .hready(tb_crc_top.hready),
+        .hrdata(tb_crc_top.hrdata),
+        .hreadyout(tb_crc_top.hreadyout),
+        .hresp(tb_crc_top.hresp)
     );
 
+    // Test result
+    reg [31:0] result;
+
+    // Test stimulus
     initial begin
         $display("Starting test_crc_simple...");
+
+        // Wait for reset to complete
+        @(posedge tb_crc_top.hreset_n);
+        @(posedge tb_crc_top.hclk);
 
         // Configure for CRC-32
         bfm.ahb_write(32'h00, 32'h2, 3'b010); // CRC_CTRL: width=CRC32
@@ -43,11 +52,10 @@ module test_crc_simple;
         bfm.ahb_write(32'h50, 8'h39, 3'b000); // '9'
 
         // Wait for interrupt
-        wait (crc_irq);
+        wait (tb_crc_top.crc_irq);
         $display("CRC DONE interrupt received.");
 
         // Read result
-        reg [31:0] result;
         bfm.ahb_read(32'h2C, result, 3'b010); // CRC_RESULT_L
 
         // Check result

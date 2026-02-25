@@ -12,6 +12,8 @@ module test_crc8_configurable;
         .hreadyout(hreadyout), .hresp(hresp)
     );
 
+    reg [31:0] result;
+
     initial begin
         $display("Starting test_crc8_configurable...");
 
@@ -33,7 +35,6 @@ module test_crc8_configurable;
         wait (crc_irq);
         $display("CRC DONE interrupt received.");
 
-        reg [31:0] result;
         bfm.ahb_read(32'h2C, result, 3'b010); // Read CRC_RESULT_L
 
         if (result[7:0] === 8'hA1) begin

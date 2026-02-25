@@ -13,6 +13,8 @@ module test_data_len_zero;
     );
 
     reg irq_fired = 0;
+    reg [31:0] data_count;
+    reg [31:0] result;
 
     always @(posedge crc_irq) begin
         irq_fired = 1;
@@ -42,14 +44,12 @@ module test_data_len_zero;
         // Wait a few cycles to ensure all data is processed
         #50;
 
-        reg [31:0] data_count;
         bfm.ahb_read(32'h44, data_count, 3'b010);
         if (data_count !== 9) begin
             $display("TEST FAILED: Data count is %d, expected 9.", data_count);
         end
 
         // Manually read result
-        reg [31:0] result;
         bfm.ahb_read(32'h2C, result, 3'b010);
 
         if (irq_fired) begin
