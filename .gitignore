@@ -9,6 +9,9 @@
 *.lxt
 *.lxt2
 
+# Generated testbench (from template)
+verification/ut/tb/tb_crc_top.v
+
 # GTKWave
 *.gtkw
 *.sav
