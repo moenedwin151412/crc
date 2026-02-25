@@ -140,10 +140,6 @@ module crc_regfile (
             data_len_reg <= 32'h0;
             done_if_reg <= 1'b0;
         end else begin
-            // Self-clearing bits
-            if (crc_start_reg) crc_start_reg <= 1'b0;
-            if (crc_rst_reg) crc_rst_reg <= 1'b0;
-
             if (wr_en) begin
                 case (addr)
                     ADDR_CRC_CTRL: begin
@@ -169,6 +165,10 @@ module crc_regfile (
                     ADDR_CRC_INT_CLR:    if(wr_data[0]) done_if_reg <= 1'b0;
                     ADDR_CRC_DATA_LEN:   data_len_reg <= wr_data;
                 endcase
+            end else begin
+                // Self-clearing bits (only when not writing)
+                if (crc_start_reg) crc_start_reg <= 1'b0;
+                if (crc_rst_reg) crc_rst_reg <= 1'b0;
             end
             
             if (engine_done) begin

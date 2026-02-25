@@ -44,80 +44,77 @@ module ahb_master_bfm (
     reg [31:0] hwdata;
     reg hready;
 
-    // Write task
+    // Write task - AHB-Lite single transfer
     task ahb_write;
         input [31:0] addr;
         input [31:0] data;
         input [2:0] size;
         begin
-            // Setup address phase signals - use blocking assignments
-            // to ensure they take effect immediately
+            // Address phase: Setup at negedge, sampled at posedge
             @(negedge hclk);
-            #1;  // Small delay to ensure ordering
             haddr = addr;
             hwrite = 1'b1;
-            htrans = 2'b10;
+            htrans = 2'b10;  // NONSEQ
             hsize = size;
-            hburst = 3'b000;
+            hburst = 3'b000; // SINGLE
             hsel = 1'b1;
             hready = 1'b1;
             
-            // Wait for clock edge
+            // Wait for posedge (address phase sampled)
             @(posedge hclk);
             
-            // Setup data
+            // Data phase: Setup write data
             @(negedge hclk);
-            #1;
             hwdata = data;
             
-            // Wait for slave ready
+            // Wait for slave ready (data phase complete)
+            // Use @(posedge hclk) and check hreadyout
             while (!hreadyout) begin
                 @(posedge hclk);
             end
             
-            // End transfer
+            // Transfer complete - immediately end at negedge
+            // This ensures transfer_active is only high for one cycle
             @(negedge hclk);
-            #1;
             hsel = 1'b0;
             hready = 1'b0;
-            htrans = 2'b00;
+            htrans = 2'b00;  // IDLE
+            hwrite = 1'b0;
         end
     endtask
 
-    // Read task
+    // Read task - AHB-Lite single transfer
     task ahb_read;
         input [31:0] addr;
         output [31:0] data;
         input [2:0] size;
         begin
-            // Setup address phase
+            // Address phase
             @(negedge hclk);
-            #1;
             haddr = addr;
             hwrite = 1'b0;
-            htrans = 2'b10;
+            htrans = 2'b10;  // NONSEQ
             hsize = size;
-            hburst = 3'b000;
+            hburst = 3'b000; // SINGLE
             hsel = 1'b1;
             hready = 1'b1;
             
-            // Wait for clock edge
+            // Wait for posedge (address sampled)
             @(posedge hclk);
             
-            // Wait for slave ready
+            // Wait for data phase complete
             while (!hreadyout) begin
                 @(posedge hclk);
             end
             
-            // Capture read data
+            // Capture data at negedge (after hreadyout is stable)
             @(negedge hclk);
-            #1;
             data = hrdata;
             
             // End transfer
             hsel = 1'b0;
             hready = 1'b0;
-            htrans = 2'b00;
+            htrans = 2'b00;  // IDLE
         end
     endtask
 
