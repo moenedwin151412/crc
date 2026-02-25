@@ -22,9 +22,10 @@ This document specifies the design of the CRC (Cyclic Redundancy Check) IP modul
 - Configurable initial XOR and output XOR
 - Fixed polynomial support for common standards
 - 32 KiB raw data region for DMA-friendly operation
+- Configurable data length for automatic completion detection
 - AHB-Lite slave interface with byte/halfword/word access
 - Burst support (INCR4/INCR8/INCR16) for raw data region
-- Interrupt support for calculation complete
+- Interrupt support when data length reaches configured value
 
 ---
 
@@ -115,7 +116,9 @@ Base Address: Configurable (example: 0x4000_0000)
 | 0x34 | CRC_INT_EN | R/W | Interrupt Enable |
 | 0x38 | CRC_INT_STATUS | R/W1C | Interrupt Status |
 | 0x3C | CRC_INT_CLR | WO | Interrupt Clear |
-| 0x40 - 0x7FFC | CRC_RAW_DATA | R/W | Raw Data Region (32 KiB) |
+| 0x40 | CRC_DATA_LEN | R/W | Data Length Configuration |
+| 0x44 | CRC_DATA_CNT | RO | Data Count (bytes processed) |
+| 0x48 - 0x7FFC | CRC_RAW_DATA | R/W | Raw Data Region (32 KiB - 8 bytes) |
 
 ### 4.1 Register Detail
 
@@ -216,7 +219,33 @@ CRC result [63:32]. Only valid when CRC_WIDTH = 2'b11 (CRC64) and DONE=1.
 | [0] | DONE_IC | WO | 1'b0 | Write 1 to clear DONE interrupt |
 | [31:1] | Reserved | R | 31'b0 | Reserved |
 
-#### CRC_RAW_DATA (0x40 - 0x7FFC)
+#### CRC_DATA_LEN (0x40)
+
+| Bit | Field | Access | Reset | Description |
+|-----|-------|--------|-------|-------------|
+| [31:0] | DATA_LEN | R/W | 32'h0 | Data length in bytes. When 0, auto-calculation is disabled. |
+
+**Description:**
+- Configures the expected data length for CRC calculation
+- When the number of bytes written to CRC_RAW_DATA equals DATA_LEN, the DONE interrupt is generated
+- Writing to this register also resets the internal data counter to 0
+- Writing 0 disables the auto-completion feature
+
+#### CRC_DATA_CNT (0x44)
+
+| Bit | Field | Access | Reset | Description |
+|-----|-------|--------|-------|-------------|
+| [31:0] | DATA_CNT | R | 32'h0 | Number of bytes processed since last CRC start |
+
+**Description:**
+- Read-only counter showing how many bytes have been written to raw data region
+- Incremented by 1 for byte write, 2 for halfword, 4 for word
+- Resets to 0 when:
+  - Writing to CRC_DATA_LEN
+  - Writing 1 to CRC_CTRL.CRC_RST
+  - Asserting HRESET_N
+
+#### CRC_RAW_DATA (0x48 - 0x7FFC)
 
 32 KiB raw data region for DMA transfer. Writing to this region automatically triggers CRC calculation with the written data.
 
@@ -231,6 +260,8 @@ CRC result [63:32]. Only valid when CRC_WIDTH = 2'b11 (CRC64) and DONE=1.
 
 ### 5.1 CRC Calculation Flow
 
+#### Mode A: Fixed Data Length (DMA-friendly)
+
 ```
 1. Configure CRC parameters
    - Select CRC width (CRC_CTRL.CRC_WIDTH)
@@ -238,14 +269,30 @@ CRC result [63:32]. Only valid when CRC_WIDTH = 2'b11 (CRC64) and DONE=1.
    - Set preset value (CRC_PRESET_*)
    - Set initial XOR (CRC_INIT_XOR_*)
    - Set output XOR (CRC_OUT_XOR_*)
+   - Set data length (CRC_DATA_LEN = N bytes)
 
 2. Write data to CRC_RAW_DATA region
    - Each write triggers automatic CRC calculation
    - Data is processed in the order written
+   - CRC_DATA_CNT increments automatically
 
-3. Poll for completion or wait for interrupt
-   - Check CRC_STATUS.DONE or wait for crc_irq
-   - Read result from CRC_RESULT_*
+3. Automatic completion when CRC_DATA_CNT == CRC_DATA_LEN
+   - DONE status set
+   - DONE interrupt generated (if enabled)
+   - Final CRC result available in CRC_RESULT_*
+
+4. Read CRC result and clear interrupt
+```
+
+#### Mode B: Variable/Unknown Data Length
+
+```
+1. Configure CRC parameters (same as Mode A)
+2. Set CRC_DATA_LEN = 0 (disable auto-completion)
+3. Write data to CRC_RAW_DATA region
+4. When all data written, poll CRC_DATA_CNT to verify
+5. Read CRC_RESULT_* for intermediate/final result
+   - Note: DONE interrupt will not trigger in this mode
 ```
 
 ### 5.2 Data Processing
@@ -354,6 +401,8 @@ Upon assertion of HRESET_N (active-low, synchronous):
 | CRC_RESULT_H | 32'h0000_0000 |
 | CRC_INT_EN | 32'h0000_0000 |
 | CRC_INT_STATUS | 32'h0000_0000 |
+| CRC_DATA_LEN | 32'h0000_0000 |
+| CRC_DATA_CNT | 32'h0000_0000 |
 
 ---
 
@@ -363,7 +412,7 @@ Upon assertion of HRESET_N (active-low, synchronous):
 
 | Source | Condition |
 |--------|-----------|
-| DONE | CRC calculation completed |
+| DONE | CRC_DATA_CNT == CRC_DATA_LEN (when CRC_DATA_LEN > 0) |
 
 ### 8.2 Interrupt Handling Procedure
 
@@ -376,7 +425,7 @@ Upon assertion of HRESET_N (active-low, synchronous):
 
 ## 9. Programming Guide
 
-### 9.1 Basic CRC Calculation Example
+### 9.1 Basic CRC Calculation Example (Fixed Length)
 
 ```c
 // Configure for CRC-32
@@ -386,6 +435,9 @@ CRC_CTRL |= (0x4 << 4);            // Select fixed CRC-32 polynomial
 // Configure parameters (using defaults)
 // CRC_PRESET_L = 0xFFFFFFFF;      // Preset value (default)
 // CRC_OUT_XOR_L = 0xFFFFFFFF;     // Output XOR (default)
+
+// Set data length (9 bytes for "123456789")
+CRC_DATA_LEN = 9;
 
 // Enable interrupt
 CRC_INT_EN = 0x1;
@@ -401,7 +453,7 @@ CRC_RAW_DATA[6] = 0x37;            // '7'
 CRC_RAW_DATA[7] = 0x38;            // '8'
 CRC_RAW_DATA[8] = 0x39;            // '9'
 
-// Wait for completion
+// Wait for completion interrupt (auto-generated when DATA_CNT == DATA_LEN)
 while (!(CRC_INT_STATUS & 0x1));
 
 // Read result
@@ -411,26 +463,36 @@ uint32_t crc_result = CRC_RESULT_L;
 CRC_INT_CLR = 0x1;
 ```
 
-### 9.2 DMA Transfer Example
+### 9.2 DMA Transfer Example (Recommended)
 
 ```c
 // Configure CRC
 CRC_CTRL = 0x2;                    // Select CRC32
 
+// Set data length for DMA transfer (e.g., 1024 bytes)
+CRC_DATA_LEN = 1024;
+
+// Enable DONE interrupt
+CRC_INT_EN = 0x1;
+
 // Configure DMA to transfer data to CRC_RAW_DATA base address
 // DMA supports burst transfers (INCR4/8/16)
 DMA_CONFIG.src = data_buffer;
 DMA_CONFIG.dst = CRC_RAW_DATA_BASE;
+DMA_CONFIG.length = 1024;          // Must match CRC_DATA_LEN
 DMA_CONFIG.burst = INCR16;
 
 // Start DMA
 dma_start();
 
-// Wait for CRC interrupt
+// Wait for CRC interrupt (auto-generated when 1024 bytes received)
 wait_for_crc_irq();
 
 // Read result
 uint32_t crc_result = CRC_RESULT_L;
+
+// Clear interrupt
+CRC_INT_CLR = 0x1;
 ```
 
 ### 9.3 Configurable Polynomial Example
@@ -449,7 +511,60 @@ CRC_PRESET_L = 0x00;
 // Set output XOR
 CRC_OUT_XOR_L = 0x00;
 
-// Write data and read result as in basic example
+// Set data length
+CRC_DATA_LEN = 4;
+
+// Enable interrupt
+CRC_INT_EN = 0x1;
+
+// Write data
+for (int i = 0; i < 4; i++) {
+    CRC_RAW_DATA[i] = test_data[i];
+}
+
+// Wait for completion
+while (!(CRC_INT_STATUS & 0x1));
+
+// Read result
+uint8_t crc_result = CRC_RESULT_L & 0xFF;
+
+// Clear interrupt
+CRC_INT_CLR = 0x1;
+```
+
+### 9.4 Multiple Sequential CRC Calculations
+
+```c
+// Function to calculate CRC for a data block
+uint32_t crc_calculate(uint8_t *data, uint32_t length, uint32_t poly_sel) {
+    // Configure CRC
+    CRC_CTRL = 0x2 | (poly_sel << 4);  // CRC32 with selected polynomial
+    
+    // Set data length (this also resets DATA_CNT to 0)
+    CRC_DATA_LEN = length;
+    
+    // Enable interrupt
+    CRC_INT_EN = 0x1;
+    
+    // Write data - can use memcpy for DMA-like efficiency
+    for (uint32_t i = 0; i < length; i++) {
+        CRC_RAW_DATA[i] = data[i];
+    }
+    
+    // Wait for completion
+    while (!(CRC_INT_STATUS & 0x1));
+    
+    uint32_t result = CRC_RESULT_L;
+    
+    // Clear interrupt
+    CRC_INT_CLR = 0x1;
+    
+    return result;
+}
+
+// Usage example
+uint32_t crc1 = crc_calculate(buffer1, 512, 0x4);  // CRC-32
+uint32_t crc2 = crc_calculate(buffer2, 1024, 0x4); // CRC-32
 ```
 
 ---
