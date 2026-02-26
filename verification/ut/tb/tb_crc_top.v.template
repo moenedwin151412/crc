@@ -67,4 +67,11 @@ module tb_crc_top;
         $dumpvars(0, tb_crc_top);
     end
 
+    // Simulation timeout - default 1ms (1,000,000 ns)
+    initial begin
+        #1000000;
+        $display("ERROR: Simulation timeout after 1ms");
+        $finish;
+    end
+
 endmodule

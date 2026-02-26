@@ -10,22 +10,28 @@ if [ -z "$TESTCASE" ]; then
     exit 1
 fi
 
-# Clean up previous run
-rm -f crc_sim.vvp
-rm -f tb_crc_top.vcd
+# Create tmp folder and test case specific folder
+TMP_DIR="tmp/${TESTCASE}"
+mkdir -p "${TMP_DIR}"
+
+# Clean up previous run for this test case
+rm -f "${TMP_DIR}/crc_sim.vvp"
+rm -f "${TMP_DIR}/tb_crc_top.vcd"
 
 # Prepare testbench from template
-cp verification/ut/tb/tb_crc_top.v.template verification/ut/tb/tb_crc_top.v
+cp verification/ut/tb/tb_crc_top.v.template "${TMP_DIR}/tb_crc_top.v"
 
 # Use printf to avoid backtick interpretation issues
 INCLUDE_LINE=$(printf '`include "verification/ut/tests/%s.v"' "$TESTCASE")
-sed -i "s|// %%TESTCASE_INCLUDE%%|$INCLUDE_LINE|" verification/ut/tb/tb_crc_top.v
+sed -i "s|// %%TESTCASE_INCLUDE%%|$INCLUDE_LINE|" "${TMP_DIR}/tb_crc_top.v"
 
 # Replace test module name (testcase files are named test_<name>.v with module test_<name>)
-sed -i "s|// %%TESTCASE_MODULE%%|$TESTCASE|" verification/ut/tb/tb_crc_top.v
+sed -i "s|// %%TESTCASE_MODULE%%|$TESTCASE|" "${TMP_DIR}/tb_crc_top.v"
 
-# Compile sources
-iverilog -o crc_sim.vvp -c design/ips/crc/crc.f verification/ut/tb/tb_crc_top.v -s tb_crc_top
+# Compile sources (run from project root for file list paths)
+iverilog -o "${TMP_DIR}/crc_sim.vvp" -c design/ips/crc/crc.f "${TMP_DIR}/tb_crc_top.v" -s tb_crc_top
 
-# Run simulation
+# Run simulation in the test case folder
+cd "${TMP_DIR}"
 vvp crc_sim.vvp
+cd - > /dev/null
